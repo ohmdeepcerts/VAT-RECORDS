@@ -8,7 +8,7 @@
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
-    <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -240,9 +240,14 @@
                 </span>
                 <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-40"></i>
             </button>
-            <div class="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center justify-center space-x-2 font-semibold tracking-wider bg-emerald-500/10 border border-emerald-500/20 py-2 rounded-xl">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                <span>LOCAL SECURE STORAGE</span>
+            <div class="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center justify-between font-semibold tracking-wider bg-emerald-500/10 border border-emerald-500/20 py-2 px-3 rounded-xl">
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                    <span id="auth-user-email" class="truncate max-w-[110px]">CLOUD SYNCED</span>
+                </div>
+                <button onclick="handleSignOut()" title="Sign out" class="text-slate-400 hover:text-rose-500 transition-colors ml-2 flex-shrink-0">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                </button>
             </div>
         </div>
     </aside>
@@ -458,7 +463,7 @@
                     <div class="lg:col-span-5 glass-panel rounded-2xl p-4 space-y-3">
                         <h4 class="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">Live Attachment Preview</h4>
                         <div id="p-preview-panel" ondragover="handleDragOver(event,'purchase')" ondragleave="handleDragLeave(event,'purchase')" ondrop="handleFileDrop(event,'purchase')">
-                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="p-dropzone">
+                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="purchase-dropzone">
                                 <span>Drop file here or choose above to preview</span>
                             </div>
                         </div>
@@ -556,7 +561,7 @@
                     <div class="lg:col-span-5 glass-panel rounded-2xl p-4 space-y-3">
                         <h4 class="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">Live Attachment Preview</h4>
                         <div id="s-preview-panel" ondragover="handleDragOver(event,'sale')" ondragleave="handleDragLeave(event,'sale')" ondrop="handleFileDrop(event,'sale')">
-                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="s-dropzone">
+                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="sale-dropzone">
                                 <span>Drop file here or choose above to preview</span>
                             </div>
                         </div>
@@ -574,7 +579,7 @@
 
             <!-- TAB 4: IMPORT / EXPORT -->
             <section id="tab-import-export" class="tab-content hidden space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <div class="glass-panel rounded-2xl p-6 space-y-4">
                         <div class="border-b border-slate-900/5 dark:border-white/5 pb-3">
                             <h3 class="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center space-x-2">
@@ -615,6 +620,23 @@
                             <button onclick="triggerAdvancedExcelExport()" id="export-excel-btn" class="glass-btn w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl flex items-center justify-center space-x-2 transition-all shadow-sm uppercase tracking-wider">
                                 <i data-lucide="download" class="w-4 h-4"></i>
                                 <span id="export-excel-text">Compile & Download .xlsx File</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 space-y-4">
+                        <div class="border-b border-slate-900/5 dark:border-white/5 pb-3">
+                            <h3 class="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center space-x-2">
+                                <i data-lucide="hard-drive-download" class="text-violet-600 w-4 h-4"></i>
+                                <span>Export JSON Backup</span>
+                            </h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Download the entire ledger as a portable .json file. Use the Backup Recovery panel to restore it later.</p>
+                        </div>
+                        <div class="space-y-4 bg-slate-900/[0.02] dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-xl p-5 text-center">
+                            <i data-lucide="database-backup" class="w-6 h-6 text-violet-600 mx-auto mb-2"></i>
+                            <p class="text-xs text-slate-500 font-medium mb-3">Exports all transactions (including attached file data) as a structured JSON archive.</p>
+                            <button onclick="triggerJsonDatabaseExport()" id="export-json-btn" class="glass-btn w-full bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all uppercase tracking-wider">
+                                Download JSON Backup
                             </button>
                         </div>
                     </div>
@@ -811,12 +833,148 @@
         </div>
     </div>
 
+    <!-- ================= AUTH MODAL ================= -->
+    <div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" style="background: rgba(15,23,42,0.88); backdrop-filter: blur(14px);">
+        <div class="glass-panel !bg-white dark:!bg-slate-900 rounded-2xl max-w-sm w-full p-8 space-y-5 shadow-2xl">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600/10 border border-blue-500/20 p-2.5 rounded-xl flex-shrink-0">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-blue-600"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-lg text-slate-800 dark:text-white">VAT Audit Engine</h2>
+                    <p id="auth-mode-label" class="text-[11px] text-slate-500 dark:text-slate-400">Sign in to access your records</p>
+                </div>
+            </div>
+            <div id="auth-error" class="hidden p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-600 font-semibold"></div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Email Address</label>
+                    <input type="email" id="auth-email" placeholder="you@example.com" class="w-full glass-input rounded-xl p-2.5 text-xs" autocomplete="email">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Password</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" class="w-full glass-input rounded-xl p-2.5 text-xs" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleAuthSubmit()">
+                </div>
+                <div id="auth-confirm-password-row" class="hidden">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Confirm Password</label>
+                    <input type="password" id="auth-confirm-password" placeholder="••••••••" class="w-full glass-input rounded-xl p-2.5 text-xs">
+                </div>
+            </div>
+            <button id="auth-submit-btn" onclick="handleAuthSubmit()" class="glass-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md">Sign In</button>
+            <div class="text-center space-y-2">
+                <button onclick="toggleAuthMode()" id="auth-toggle-link" class="text-[11px] text-blue-600 hover:text-blue-700 font-semibold transition-colors block w-full">Don't have an account? Sign up</button>
+                <button onclick="handleMagicLink()" class="text-[10px] text-slate-400 hover:text-blue-600 font-medium transition-colors">Send magic link (passwordless)</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
     <script>
-        const db = new Dexie("VatDualAuditTrackerDB");
-        db.version(4).stores({
-            transactions: '++id, type, date, supplier, category, receiptNo, net, vatRate, vatAmount, gross, fileName, serialNo, serialFrozen'
-        });
+        // ================= SUPABASE INIT =================
+        const SUPABASE_URL = 'https://pajpoerteyjrprcaisom.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhanBvZXJ0ZXlqcnByY2Fpc29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTI4NDEsImV4cCI6MjA5NjQ4ODg0MX0.zUzCg-bq_9ZxYWSmk-Y9a_QqAe0t-45tjHP5Eiyxjcc';
+        const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUserId = null;
+        let _allTransactionsCache = null;
+        let _settingsCache = { startSerialSales: 1, startSerialPurchases: 1 };
+
+        function toDbEntry(entry) {
+            return {
+                user_id: currentUserId,
+                type: entry.type,
+                date: entry.date,
+                supplier: entry.supplier || '',
+                category: entry.category || null,
+                receipt_no: entry.receiptNo || null,
+                net: entry.net || 0,
+                vat_rate: entry.vatRate || '20',
+                vat_amount: entry.vatAmount || 0,
+                gross: entry.gross || 0,
+                file_data: entry.fileData || null,
+                file_name: entry.fileName || null,
+                serial_no: entry.serialNo || null,
+                serial_frozen: entry.serialFrozen || false
+            };
+        }
+
+        function fromDbEntry(row) {
+            return {
+                id: row.id,
+                type: row.type,
+                date: row.date,
+                supplier: row.supplier,
+                category: row.category,
+                receiptNo: row.receipt_no,
+                net: parseFloat(row.net) || 0,
+                vatRate: row.vat_rate,
+                vatAmount: parseFloat(row.vat_amount) || 0,
+                gross: parseFloat(row.gross) || 0,
+                fileData: row.file_data,
+                fileName: row.file_name,
+                serialNo: row.serial_no,
+                serialFrozen: row.serial_frozen || false
+            };
+        }
+
+        const db = {
+            transactions: {
+                async add(entry) {
+                    _allTransactionsCache = null;
+                    const { data, error } = await _supa.from('vat_transactions').insert(toDbEntry(entry)).select('id').single();
+                    if (error) { showToast('Save failed: ' + error.message, 'error'); throw error; }
+                    return data.id;
+                },
+                async update(id, changes) {
+                    _allTransactionsCache = null;
+                    const dbChanges = {};
+                    if ('type' in changes) dbChanges.type = changes.type;
+                    if ('date' in changes) dbChanges.date = changes.date;
+                    if ('supplier' in changes) dbChanges.supplier = changes.supplier;
+                    if ('category' in changes) dbChanges.category = changes.category;
+                    if ('receiptNo' in changes) dbChanges.receipt_no = changes.receiptNo;
+                    if ('net' in changes) dbChanges.net = changes.net;
+                    if ('vatRate' in changes) dbChanges.vat_rate = changes.vatRate;
+                    if ('vatAmount' in changes) dbChanges.vat_amount = changes.vatAmount;
+                    if ('gross' in changes) dbChanges.gross = changes.gross;
+                    if ('fileData' in changes) dbChanges.file_data = changes.fileData;
+                    if ('fileName' in changes) dbChanges.file_name = changes.fileName;
+                    if ('serialNo' in changes) dbChanges.serial_no = changes.serialNo;
+                    if ('serialFrozen' in changes) dbChanges.serial_frozen = changes.serialFrozen;
+                    const { error } = await _supa.from('vat_transactions').update(dbChanges).eq('id', id).eq('user_id', currentUserId);
+                    if (error) { showToast('Update failed: ' + error.message, 'error'); throw error; }
+                },
+                async get(id) {
+                    const { data, error } = await _supa.from('vat_transactions').select('*').eq('id', id).eq('user_id', currentUserId).single();
+                    if (error || !data) return null;
+                    return fromDbEntry(data);
+                },
+                async delete(id) {
+                    _allTransactionsCache = null;
+                    const { error } = await _supa.from('vat_transactions').delete().eq('id', id).eq('user_id', currentUserId);
+                    if (error) { showToast('Delete failed: ' + error.message, 'error'); throw error; }
+                },
+                async toArray() {
+                    if (_allTransactionsCache) return _allTransactionsCache;
+                    const { data, error } = await _supa.from('vat_transactions').select('*').eq('user_id', currentUserId).order('date', { ascending: true });
+                    if (error) return [];
+                    _allTransactionsCache = data.map(fromDbEntry);
+                    return _allTransactionsCache;
+                },
+                where(field) {
+                    return {
+                        equals(value) {
+                            return {
+                                async toArray() {
+                                    const all = await db.transactions.toArray();
+                                    return all.filter(item => item[field] === value);
+                                }
+                            };
+                        }
+                    };
+                }
+            }
+        };
 
         let overrideState = { purchase: false, sale: false };
         let fileBuffers = { purchase: { data: null, name: null }, sale: { data: null, name: null } };
@@ -830,26 +988,58 @@
         let pieChartInstance = null;
         let categoryChartInstance = null;
 
-        // Image viewer listener tracking to prevent memory leaks
         let viewerListeners = {};
+        let _appInitialized = false;
 
         document.addEventListener("DOMContentLoaded", () => {
             initTheme();
-            loadCompanyProfile();
-            loadLockedMonths();
-            loadCategories();
-            loadStartingSerials();
-
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('p-date').value = today;
-            document.getElementById('s-date').value = today;
-
-            switchTab('dashboard');
-            populateAvailableMonthSelectors();
             lucide.createIcons();
-            setupKeyboardShortcuts();
-            setupBeforeUnload();
-            setupEscapeListener();
+            document.getElementById('main-area').style.display = 'none';
+            document.getElementById('sidebar').style.display = 'none';
+
+            _supa.auth.onAuthStateChange(async (event, session) => {
+                if (session) {
+                    currentUserId = session.user.id;
+                    _allTransactionsCache = null;
+                    document.getElementById('auth-modal').classList.add('hidden');
+                    document.getElementById('main-area').style.display = '';
+                    document.getElementById('sidebar').style.display = '';
+                    document.getElementById('auth-user-email').innerText = session.user.email.split('@')[0];
+
+                    await loadCompanyProfile();
+                    await loadLockedMonths();
+                    await loadCategories();
+                    await loadStartingSerials();
+
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('p-date').value = today;
+                    document.getElementById('s-date').value = today;
+
+                    switchTab('dashboard');
+                    populateAvailableMonthSelectors();
+                    lucide.createIcons();
+
+                    if (!_appInitialized) {
+                        _appInitialized = true;
+                        setupKeyboardShortcuts();
+                        setupBeforeUnload();
+                        setupEscapeListener();
+                        document.getElementById('master-log-table-body').addEventListener('click', async (e) => {
+                            const btn = e.target.closest('.audit-file-btn');
+                            if (!btn) return;
+                            const item = await db.transactions.get(parseInt(btn.dataset.txid));
+                            if (item && item.fileData) openFileViewer(item.fileData, item.fileName);
+                        });
+                    }
+                } else {
+                    currentUserId = null;
+                    _allTransactionsCache = null;
+                    document.getElementById('auth-modal').classList.remove('hidden');
+                    document.getElementById('main-area').style.display = 'none';
+                    document.getElementById('sidebar').style.display = 'none';
+                    lucide.createIcons();
+                }
+            });
         });
 
         // ================= THEME =================
@@ -939,31 +1129,37 @@
         });
 
         // ================= COMPANY PROFILE =================
-        function loadCompanyProfile() {
-            const savedName = localStorage.getItem('vat_tracker_company_name');
-            const displayTitle = savedName ? savedName : "SET COMPANY PROFILE";
+        async function loadCompanyProfile() {
+            const { data } = await _supa.from('vat_user_settings').select('company_name').eq('user_id', currentUserId).maybeSingle();
+            const savedName = data?.company_name || '';
+            const displayTitle = savedName || "SET COMPANY PROFILE";
             document.getElementById('sidebar-company-name').innerText = displayTitle.toUpperCase();
-            document.getElementById('settings-company-input').value = savedName || '';
+            document.getElementById('settings-company-input').value = savedName;
             document.getElementById('header-company-sub').innerText = savedName ? `Trading profile context: ${displayTitle}` : '';
         }
-        function saveCompanyProfile() {
-            localStorage.setItem('vat_tracker_company_name', document.getElementById('settings-company-input').value.trim());
-            loadCompanyProfile();
+        async function saveCompanyProfile() {
+            const name = document.getElementById('settings-company-input').value.trim();
+            await _supa.from('vat_user_settings').upsert({ user_id: currentUserId, company_name: name });
+            await loadCompanyProfile();
             showToast("Company profile saved.", "success");
         }
 
         // ================= STARTING SERIAL NUMBERS =================
-        function loadStartingSerials() {
-            const sales = parseInt(localStorage.getItem('vat_start_serial_sales')) || 1;
-            const purchases = parseInt(localStorage.getItem('vat_start_serial_purchases')) || 1;
-            document.getElementById('settings-start-serial-sales').value = isNaN(sales) ? 1 : sales;
-            document.getElementById('settings-start-serial-purchases').value = isNaN(purchases) ? 1 : purchases;
+        async function loadStartingSerials() {
+            const { data } = await _supa.from('vat_user_settings').select('start_serial_sales, start_serial_purchases').eq('user_id', currentUserId).maybeSingle();
+            const sales = data?.start_serial_sales || 1;
+            const purchases = data?.start_serial_purchases || 1;
+            _settingsCache.startSerialSales = sales;
+            _settingsCache.startSerialPurchases = purchases;
+            document.getElementById('settings-start-serial-sales').value = sales;
+            document.getElementById('settings-start-serial-purchases').value = purchases;
         }
-        function saveStartingSerials() {
+        async function saveStartingSerials() {
             const sales = parseInt(document.getElementById('settings-start-serial-sales').value) || 1;
             const purchases = parseInt(document.getElementById('settings-start-serial-purchases').value) || 1;
-            localStorage.setItem('vat_start_serial_sales', isNaN(sales) ? 1 : sales);
-            localStorage.setItem('vat_start_serial_purchases', isNaN(purchases) ? 1 : purchases);
+            _settingsCache.startSerialSales = sales;
+            _settingsCache.startSerialPurchases = purchases;
+            await _supa.from('vat_user_settings').upsert({ user_id: currentUserId, start_serial_sales: sales, start_serial_purchases: purchases });
             showToast("Starting serial numbers saved. Unlocked entries will renumber.", "success");
             updateApplicationMetrics();
         }
@@ -1078,33 +1274,32 @@
         }
 
         // ================= CATEGORIES =================
-        function loadCategories() {
-            categories = JSON.parse(localStorage.getItem('vat_categories')) || [];
+        async function loadCategories() {
+            const { data } = await _supa.from('vat_categories').select('name').eq('user_id', currentUserId);
+            categories = (data || []).map(r => r.name).sort();
             renderCategoryDatalist();
             renderCategoryManagerList();
         }
-        function persistCategories() {
-            localStorage.setItem('vat_categories', JSON.stringify(categories));
-        }
-        function addCategoryIfNew(name) {
+        async function addCategoryIfNew(name) {
             const trimmed = (name || '').trim();
             if (trimmed && !categories.includes(trimmed)) {
                 categories.push(trimmed);
-                persistCategories();
+                categories.sort();
+                await _supa.from('vat_categories').upsert({ user_id: currentUserId, name: trimmed }, { onConflict: 'user_id,name', ignoreDuplicates: true });
                 renderCategoryDatalist();
                 renderCategoryManagerList();
             }
         }
-        function addCategoryFromSettings() {
+        async function addCategoryFromSettings() {
             const input = document.getElementById('settings-new-category');
-            addCategoryIfNew(input.value);
+            await addCategoryIfNew(input.value);
             input.value = '';
             showToast("Category added.", "success");
         }
         function removeCategory(name) {
-            showConfirm("Remove Category", `Remove "${name}" from suggestions? Existing entries keep it.`, () => {
+            showConfirm("Remove Category", `Remove "${name}" from suggestions? Existing entries keep it.`, async () => {
                 categories = categories.filter(c => c !== name);
-                persistCategories();
+                await _supa.from('vat_categories').delete().eq('user_id', currentUserId).eq('name', name);
                 renderCategoryDatalist();
                 renderCategoryManagerList();
                 showToast("Category removed.", "success");
@@ -1120,16 +1315,24 @@
                 container.innerHTML = '<span class="text-[11px] text-slate-400 italic">No categories yet — add one above.</span>';
                 return;
             }
-            container.innerHTML = categories.map(c => `
-                <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20">
-                    <span>${c}</span>
-                    <button onclick="removeCategory('${c}')" class="text-blue-500 hover:text-blue-700 ml-1 font-black" title="Remove category">&times;</button>
-                </span>`).join('');
+            container.innerHTML = categories.map(c => {
+                const safe = c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                return `<span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20">
+                    <span>${safe}</span>
+                    <button data-cat="${safe}" class="remove-cat-btn text-blue-500 hover:text-blue-700 ml-1 font-black" title="Remove category">&times;</button>
+                </span>`;
+            }).join('');
         }
 
+        document.getElementById('category-manager-list').addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-cat-btn');
+            if (btn) removeCategory(btn.dataset.cat);
+        });
+
         // ================= PERIOD LOCKS =================
-        function loadLockedMonths() {
-            lockedMonths = JSON.parse(localStorage.getItem('vat_locked_months')) || [];
+        async function loadLockedMonths() {
+            const { data } = await _supa.from('vat_locked_periods').select('period').eq('user_id', currentUserId);
+            lockedMonths = (data || []).map(r => r.period);
             renderLockedBadges();
             renderMonthGrid();
         }
@@ -1174,7 +1377,7 @@
                 }
 
                 lockedMonths.push(val);
-                localStorage.setItem('vat_locked_months', JSON.stringify(lockedMonths));
+                await _supa.from('vat_locked_periods').insert({ user_id: currentUserId, period: val });
                 loadLockedMonths();
                 updateApplicationMetrics();
                 evaluateLockStatusForForms();
@@ -1194,7 +1397,7 @@
                 }
 
                 lockedMonths = lockedMonths.filter(x => x !== m);
-                localStorage.setItem('vat_locked_months', JSON.stringify(lockedMonths));
+                await _supa.from('vat_locked_periods').delete().eq('user_id', currentUserId).eq('period', m);
                 loadLockedMonths();
                 updateApplicationMetrics();
                 evaluateLockStatusForForms();
@@ -1372,15 +1575,18 @@
         function handleDragOver(e, type) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
-            document.getElementById(`${type}-dropzone`).classList.add('drag-active');
+            const dz = document.getElementById(`${type}-dropzone`);
+            if (dz) dz.classList.add('drag-active');
         }
         function handleDragLeave(e, type) {
             e.preventDefault();
-            document.getElementById(`${type}-dropzone`).classList.remove('drag-active');
+            const dz = document.getElementById(`${type}-dropzone`);
+            if (dz) dz.classList.remove('drag-active');
         }
         function handleFileDrop(e, type) {
             e.preventDefault();
-            document.getElementById(`${type}-dropzone`).classList.remove('drag-active');
+            const dz = document.getElementById(`${type}-dropzone`);
+            if (dz) dz.classList.remove('drag-active');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 processFile(files[0], type);
@@ -1452,7 +1658,7 @@
             // If editing existing
             if (editState.id && editState.type === type) {
                 await db.transactions.update(editState.id, entry);
-                addCategoryIfNew(entry.category);
+                await addCategoryIfNew(entry.category);
                 showToast("Entry updated successfully.", "success");
                 clearForm(type);
                 updateApplicationMetrics();
@@ -1471,7 +1677,7 @@
 
         async function commitTransactionSave(type, entry, andAnother = false) {
             await db.transactions.add(entry);
-            addCategoryIfNew(entry.category);
+            await addCategoryIfNew(entry.category);
             showToast(`${type === 'purchase' ? 'Purchase' : 'Sale'} entry saved.`, "success");
             clearForm(type, andAnother);
             updateApplicationMetrics();
@@ -1950,10 +2156,8 @@
             const allItems = await db.transactions.toArray();
             allItems.forEach(item => { item.isLocked = isDateLocked(item.date); });
 
-            let startSales = parseInt(localStorage.getItem('vat_start_serial_sales')) || 1;
-            let startPurchases = parseInt(localStorage.getItem('vat_start_serial_purchases')) || 1;
-            if (isNaN(startSales)) startSales = 1;
-            if (isNaN(startPurchases)) startPurchases = 1;
+            let startSales = _settingsCache.startSerialSales || 1;
+            let startPurchases = _settingsCache.startSerialPurchases || 1;
 
             const result = [];
             [['sale', startSales], ['purchase', startPurchases]].forEach(([type, startNum]) => {
@@ -2089,8 +2293,9 @@
                 const actionHtml = r.isLocked
                     ? '<span class="text-[10px] text-slate-400" title="Locked">🔒</span>'
                     : `<div class="flex items-center justify-center gap-1"><button onclick="editRow(${r.id})" class="glass-btn text-blue-600 p-1.5 rounded-lg hover:bg-blue-500/10 transition-all" title="Edit entry"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button><button onclick="deleteRow(${r.id})" class="glass-btn text-rose-600 p-1.5 rounded-lg hover:bg-rose-500/10 transition-all" title="Delete entry"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`;
+                const safeFileName = (r.fileName || 'file').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 const fileHtml = r.fileData
-                    ? `<button onclick="openFileViewer('${r.fileData}', '${r.fileName || 'file'}')" class="text-blue-600 hover:underline font-semibold truncate max-w-[100px] block" title="View attachment">${r.fileName}</button>`
+                    ? `<button data-txid="${r.id}" class="audit-file-btn text-blue-600 hover:underline font-semibold truncate max-w-[100px] block" title="View attachment">${safeFileName}</button>`
                     : '<span class="opacity-40">None</span>';
 
                 auditRows.push(`<tr class="hover:bg-slate-900/[0.02] dark:hover:bg-white/5 border-b border-slate-900/5 dark:border-white/5 transition-colors">
@@ -2583,7 +2788,7 @@
                     const duplicate = await findDuplicateEntry(entry.type, entry);
                     if (duplicate) { skippedDuplicate++; continue; }
                     await db.transactions.add(entry);
-                    if (entry.category) addCategoryIfNew(entry.category);
+                    if (entry.category) await addCategoryIfNew(entry.category);
                     imported++;
                 }
 
@@ -2594,6 +2799,117 @@
                 showToast(`Imported ${imported} rows from Excel.`, "success");
             });
             btn.disabled = false;
+        }
+
+        async function triggerJsonDatabaseExport() {
+            const btn = document.getElementById('export-json-btn');
+            btn.disabled = true;
+            const original = btn.innerText;
+            btn.innerHTML = '<span class="spinner mr-2"></span> Exporting...';
+
+            const allData = await db.transactions.toArray();
+            if (allData.length === 0) {
+                btn.disabled = false;
+                btn.innerText = original;
+                return showToast("No transactions to export.", "warning");
+            }
+
+            const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VAT_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            btn.disabled = false;
+            btn.innerText = original;
+            showToast(`Exported ${allData.length} transactions to JSON.`, "success");
+        }
+
+        // ================= AUTH FUNCTIONS =================
+        let _authMode = 'signin';
+
+        function toggleAuthMode() {
+            _authMode = _authMode === 'signin' ? 'signup' : 'signin';
+            const isSignup = _authMode === 'signup';
+            document.getElementById('auth-mode-label').innerText = isSignup ? 'Create your account' : 'Sign in to access your records';
+            document.getElementById('auth-confirm-password-row').classList.toggle('hidden', !isSignup);
+            document.getElementById('auth-submit-btn').innerText = isSignup ? 'Create Account' : 'Sign In';
+            document.getElementById('auth-toggle-link').innerText = isSignup ? 'Already have an account? Sign in' : "Don't have an account? Sign up";
+            const errEl = document.getElementById('auth-error');
+            errEl.classList.add('hidden');
+            document.getElementById('auth-confirm-password').value = '';
+        }
+
+        async function handleAuthSubmit() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const errEl = document.getElementById('auth-error');
+            const btn = document.getElementById('auth-submit-btn');
+            errEl.classList.add('hidden');
+            errEl.className = 'hidden p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-600 font-semibold';
+
+            if (!email || !password) {
+                errEl.innerText = 'Email and password are required.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (_authMode === 'signup') {
+                const confirm = document.getElementById('auth-confirm-password').value;
+                if (password !== confirm) {
+                    errEl.innerText = 'Passwords do not match.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner mr-2"></span>' + (_authMode === 'signin' ? 'Signing in...' : 'Creating account...');
+
+            const result = _authMode === 'signup'
+                ? await _supa.auth.signUp({ email, password })
+                : await _supa.auth.signInWithPassword({ email, password });
+
+            btn.disabled = false;
+            btn.innerText = _authMode === 'signin' ? 'Sign In' : 'Create Account';
+
+            if (result.error) {
+                errEl.innerText = result.error.message;
+                errEl.classList.remove('hidden');
+            } else if (_authMode === 'signup' && !result.data.session) {
+                errEl.className = 'p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-600 font-semibold';
+                errEl.innerText = 'Account created! Check your email to confirm, then sign in.';
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        async function handleMagicLink() {
+            const email = document.getElementById('auth-email').value.trim();
+            const errEl = document.getElementById('auth-error');
+            errEl.className = 'hidden p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-600 font-semibold';
+            if (!email) {
+                errEl.innerText = 'Enter your email address first.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            const { error } = await _supa.auth.signInWithOtp({ email });
+            if (error) {
+                errEl.innerText = error.message;
+                errEl.classList.remove('hidden');
+            } else {
+                errEl.className = 'p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-600 font-semibold';
+                errEl.innerText = 'Magic link sent! Check your inbox.';
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function handleSignOut() {
+            showConfirm("Sign Out", "Sign out of your VAT Audit account?", async () => {
+                await _supa.auth.signOut();
+            }, "Sign Out", "bg-slate-700 hover:bg-slate-800");
         }
 
         async function triggerJsonDatabaseImport() {
@@ -2618,7 +2934,7 @@
                             delete item.calculatedSerial;
                             delete item.isLocked;
                             await db.transactions.add(item);
-                            if (item.category) addCategoryIfNew(item.category);
+                            if (item.category) await addCategoryIfNew(item.category);
                             imported++;
                         }
                         statusEl.innerText = `Restored ${imported} entries. Skipped ${skippedLocked} locked-period rows.`;
