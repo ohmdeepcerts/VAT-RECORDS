@@ -458,7 +458,7 @@
                     <div class="lg:col-span-5 glass-panel rounded-2xl p-4 space-y-3">
                         <h4 class="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">Live Attachment Preview</h4>
                         <div id="p-preview-panel" ondragover="handleDragOver(event,'purchase')" ondragleave="handleDragLeave(event,'purchase')" ondrop="handleFileDrop(event,'purchase')">
-                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="p-dropzone">
+                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="purchase-dropzone">
                                 <span>Drop file here or choose above to preview</span>
                             </div>
                         </div>
@@ -556,7 +556,7 @@
                     <div class="lg:col-span-5 glass-panel rounded-2xl p-4 space-y-3">
                         <h4 class="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">Live Attachment Preview</h4>
                         <div id="s-preview-panel" ondragover="handleDragOver(event,'sale')" ondragleave="handleDragLeave(event,'sale')" ondrop="handleFileDrop(event,'sale')">
-                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="s-dropzone">
+                            <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl transition-all" id="sale-dropzone">
                                 <span>Drop file here or choose above to preview</span>
                             </div>
                         </div>
@@ -574,7 +574,7 @@
 
             <!-- TAB 4: IMPORT / EXPORT -->
             <section id="tab-import-export" class="tab-content hidden space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     <div class="glass-panel rounded-2xl p-6 space-y-4">
                         <div class="border-b border-slate-900/5 dark:border-white/5 pb-3">
                             <h3 class="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center space-x-2">
@@ -615,6 +615,23 @@
                             <button onclick="triggerAdvancedExcelExport()" id="export-excel-btn" class="glass-btn w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 rounded-xl flex items-center justify-center space-x-2 transition-all shadow-sm uppercase tracking-wider">
                                 <i data-lucide="download" class="w-4 h-4"></i>
                                 <span id="export-excel-text">Compile & Download .xlsx File</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 space-y-4">
+                        <div class="border-b border-slate-900/5 dark:border-white/5 pb-3">
+                            <h3 class="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider flex items-center space-x-2">
+                                <i data-lucide="hard-drive-download" class="text-violet-600 w-4 h-4"></i>
+                                <span>Export JSON Backup</span>
+                            </h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Download the entire ledger as a portable .json file. Use the Backup Recovery panel to restore it later.</p>
+                        </div>
+                        <div class="space-y-4 bg-slate-900/[0.02] dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-xl p-5 text-center">
+                            <i data-lucide="database-backup" class="w-6 h-6 text-violet-600 mx-auto mb-2"></i>
+                            <p class="text-xs text-slate-500 font-medium mb-3">Exports all transactions (including attached file data) as a structured JSON archive.</p>
+                            <button onclick="triggerJsonDatabaseExport()" id="export-json-btn" class="glass-btn w-full bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold py-2.5 rounded-xl transition-all uppercase tracking-wider">
+                                Download JSON Backup
                             </button>
                         </div>
                     </div>
@@ -850,6 +867,13 @@
             setupKeyboardShortcuts();
             setupBeforeUnload();
             setupEscapeListener();
+
+            document.getElementById('master-log-table-body').addEventListener('click', async (e) => {
+                const btn = e.target.closest('.audit-file-btn');
+                if (!btn) return;
+                const item = await db.transactions.get(parseInt(btn.dataset.txid));
+                if (item && item.fileData) openFileViewer(item.fileData, item.fileName);
+            });
         });
 
         // ================= THEME =================
@@ -1120,12 +1144,19 @@
                 container.innerHTML = '<span class="text-[11px] text-slate-400 italic">No categories yet — add one above.</span>';
                 return;
             }
-            container.innerHTML = categories.map(c => `
-                <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20">
-                    <span>${c}</span>
-                    <button onclick="removeCategory('${c}')" class="text-blue-500 hover:text-blue-700 ml-1 font-black" title="Remove category">&times;</button>
-                </span>`).join('');
+            container.innerHTML = categories.map(c => {
+                const safe = c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                return `<span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-700 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20">
+                    <span>${safe}</span>
+                    <button data-cat="${safe}" class="remove-cat-btn text-blue-500 hover:text-blue-700 ml-1 font-black" title="Remove category">&times;</button>
+                </span>`;
+            }).join('');
         }
+
+        document.getElementById('category-manager-list').addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-cat-btn');
+            if (btn) removeCategory(btn.dataset.cat);
+        });
 
         // ================= PERIOD LOCKS =================
         function loadLockedMonths() {
@@ -1372,15 +1403,18 @@
         function handleDragOver(e, type) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
-            document.getElementById(`${type}-dropzone`).classList.add('drag-active');
+            const dz = document.getElementById(`${type}-dropzone`);
+            if (dz) dz.classList.add('drag-active');
         }
         function handleDragLeave(e, type) {
             e.preventDefault();
-            document.getElementById(`${type}-dropzone`).classList.remove('drag-active');
+            const dz = document.getElementById(`${type}-dropzone`);
+            if (dz) dz.classList.remove('drag-active');
         }
         function handleFileDrop(e, type) {
             e.preventDefault();
-            document.getElementById(`${type}-dropzone`).classList.remove('drag-active');
+            const dz = document.getElementById(`${type}-dropzone`);
+            if (dz) dz.classList.remove('drag-active');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 processFile(files[0], type);
@@ -2089,8 +2123,9 @@
                 const actionHtml = r.isLocked
                     ? '<span class="text-[10px] text-slate-400" title="Locked">🔒</span>'
                     : `<div class="flex items-center justify-center gap-1"><button onclick="editRow(${r.id})" class="glass-btn text-blue-600 p-1.5 rounded-lg hover:bg-blue-500/10 transition-all" title="Edit entry"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button><button onclick="deleteRow(${r.id})" class="glass-btn text-rose-600 p-1.5 rounded-lg hover:bg-rose-500/10 transition-all" title="Delete entry"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`;
+                const safeFileName = (r.fileName || 'file').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 const fileHtml = r.fileData
-                    ? `<button onclick="openFileViewer('${r.fileData}', '${r.fileName || 'file'}')" class="text-blue-600 hover:underline font-semibold truncate max-w-[100px] block" title="View attachment">${r.fileName}</button>`
+                    ? `<button data-txid="${r.id}" class="audit-file-btn text-blue-600 hover:underline font-semibold truncate max-w-[100px] block" title="View attachment">${safeFileName}</button>`
                     : '<span class="opacity-40">None</span>';
 
                 auditRows.push(`<tr class="hover:bg-slate-900/[0.02] dark:hover:bg-white/5 border-b border-slate-900/5 dark:border-white/5 transition-colors">
@@ -2594,6 +2629,34 @@
                 showToast(`Imported ${imported} rows from Excel.`, "success");
             });
             btn.disabled = false;
+        }
+
+        async function triggerJsonDatabaseExport() {
+            const btn = document.getElementById('export-json-btn');
+            btn.disabled = true;
+            const original = btn.innerText;
+            btn.innerHTML = '<span class="spinner mr-2"></span> Exporting...';
+
+            const allData = await db.transactions.toArray();
+            if (allData.length === 0) {
+                btn.disabled = false;
+                btn.innerText = original;
+                return showToast("No transactions to export.", "warning");
+            }
+
+            const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VAT_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            btn.disabled = false;
+            btn.innerText = original;
+            showToast(`Exported ${allData.length} transactions to JSON.`, "success");
         }
 
         async function triggerJsonDatabaseImport() {
