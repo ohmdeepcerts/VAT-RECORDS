@@ -326,6 +326,16 @@
                     <div class="h-64 relative w-full"><canvas id="categoryChart"></canvas></div>
                 </div>
 
+                <!-- VAT Return Summary -->
+                <div class="glass-panel rounded-2xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">VAT Return Summary (MTD)</h4>
+                        <span id="vat-return-vat-no" class="text-[10px] font-mono text-slate-400"></span>
+                    </div>
+                    <div id="vat-return-boxes" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></div>
+                    <p class="text-[10px] text-slate-400">Based on entries in the current dashboard date range. Box 2, 8 &amp; 9 (EC trade) not applicable.</p>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <div class="lg:col-span-8 glass-panel rounded-2xl overflow-hidden">
                         <div class="p-4 border-b border-slate-900/5 dark:border-white/5 flex justify-between items-center bg-slate-900/[0.02] dark:bg-white/5">
@@ -651,7 +661,7 @@
 
                         <div class="space-y-4 bg-slate-900/[0.02] dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-xl p-5 text-center">
                             <i data-lucide="database" class="w-6 h-6 text-blue-600 mx-auto mb-2"></i>
-                            <p class="text-xs text-slate-500 font-medium mb-3">Select matching `.json` backup registers to overlay local IndexedDB states.</p>
+                            <p class="text-xs text-slate-500 font-medium mb-3">Select a matching `.json` backup to restore your cloud transaction records.</p>
                             <input type="file" id="import-json-file" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-500/10 file:text-blue-600 hover:file:bg-blue-500/20 cursor-pointer" aria-label="Import JSON backup">
                             <button onclick="triggerJsonDatabaseImport()" id="import-json-btn" class="glass-btn w-full bg-slate-800 hover:bg-slate-900 border border-white/10 text-white text-xs font-bold py-2.5 rounded-xl transition-all uppercase tracking-wider mt-2">
                                 Execute Database System Restoration
@@ -694,8 +704,11 @@
                         <option value="ALL">All Categories</option>
                     </select>
                     <div class="flex-1 min-w-[200px]">
-                        <input type="text" id="log-search" oninput="updateApplicationMetrics()" placeholder="Search supplier, invoice, amount..." class="w-full glass-input rounded-xl px-3 py-2 text-xs" aria-label="Search audit log">
+                        <input type="text" id="log-search" oninput="debouncedUpdateMetrics()" placeholder="Search supplier, invoice, amount..." class="w-full glass-input rounded-xl px-3 py-2 text-xs" aria-label="Search audit log">
                     </div>
+                    <input type="date" id="log-date-from" onchange="updateApplicationMetrics()" class="glass-input dark:bg-slate-900 rounded-xl px-3 py-2 text-xs" aria-label="Filter from date" title="From date">
+                    <input type="date" id="log-date-to" onchange="updateApplicationMetrics()" class="glass-input dark:bg-slate-900 rounded-xl px-3 py-2 text-xs" aria-label="Filter to date" title="To date">
+                    <button onclick="clearAuditDateFilter()" class="glass-btn bg-slate-900/5 dark:bg-white/10 text-slate-500 text-xs font-bold px-3 py-2 rounded-xl transition-all">Clear Dates</button>
                 </div>
 
                 <div class="glass-panel rounded-2xl overflow-hidden">
@@ -743,6 +756,15 @@
                         <input type="text" id="settings-company-input" class="flex-1 glass-input rounded-xl px-3 py-2 text-xs" aria-label="Company name">
                         <button onclick="saveCompanyProfile()" class="glass-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all">Save Profile</button>
                     </div>
+                </div>
+
+                <div class="bg-slate-900/[0.02] dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-4 rounded-xl space-y-3">
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">VAT Registration Number</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="settings-vat-number" placeholder="e.g. GB 123 4567 89" class="flex-1 glass-input rounded-xl px-3 py-2 text-xs font-mono" aria-label="VAT registration number">
+                        <button onclick="saveVatNumber()" class="glass-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all">Save</button>
+                    </div>
+                    <p class="text-[10px] text-slate-400">Your UK VAT registration number — shown on exports and the return summary.</p>
                 </div>
 
                 <div class="bg-slate-900/[0.02] dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-4 rounded-xl space-y-3">
@@ -833,6 +855,14 @@
         </div>
     </div>
 
+    <!-- ================= LOADING OVERLAY ================= -->
+    <div id="loading-overlay" class="hidden fixed inset-0 z-[110] flex items-center justify-center" style="background: rgba(15,23,42,0.6); backdrop-filter: blur(8px);">
+        <div class="glass-panel !bg-white dark:!bg-slate-900 rounded-2xl p-6 flex flex-col items-center space-y-3 shadow-2xl">
+            <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Loading your data...</p>
+        </div>
+    </div>
+
     <!-- ================= AUTH MODAL ================= -->
     <div id="auth-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" style="background: rgba(15,23,42,0.88); backdrop-filter: blur(14px);">
         <div class="glass-panel !bg-white dark:!bg-slate-900 rounded-2xl max-w-sm w-full p-8 space-y-5 shadow-2xl">
@@ -864,6 +894,7 @@
             <div class="text-center space-y-2">
                 <button onclick="toggleAuthMode()" id="auth-toggle-link" class="text-[11px] text-blue-600 hover:text-blue-700 font-semibold transition-colors block w-full">Don't have an account? Sign up</button>
                 <button onclick="handleMagicLink()" class="text-[10px] text-slate-400 hover:text-blue-600 font-medium transition-colors">Send magic link (passwordless)</button>
+                <button onclick="handleForgotPassword()" class="text-[10px] text-slate-400 hover:text-blue-600 font-medium transition-colors">Forgot password? Reset via email</button>
             </div>
         </div>
     </div>
@@ -915,6 +946,16 @@
                 serialNo: row.serial_no,
                 serialFrozen: row.serial_frozen || false
             };
+        }
+
+        function h(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function debounce(fn, ms) {
+            let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
         }
 
         const db = {
@@ -987,6 +1028,7 @@
         let timelineChartInstance = null;
         let pieChartInstance = null;
         let categoryChartInstance = null;
+        let _chartTheme = null;
 
         let viewerListeners = {};
         let _appInitialized = false;
@@ -1005,12 +1047,15 @@
                     document.getElementById('main-area').style.display = '';
                     document.getElementById('sidebar').style.display = '';
                     document.getElementById('auth-user-email').innerText = session.user.email.split('@')[0];
+                    document.getElementById('loading-overlay').classList.remove('hidden');
 
                     await loadCompanyProfile();
                     await loadLockedMonths();
                     await loadCategories();
                     await loadStartingSerials();
+                    await loadVatNumber();
 
+                    document.getElementById('loading-overlay').classList.add('hidden');
                     const today = new Date().toISOString().split('T')[0];
                     document.getElementById('p-date').value = today;
                     document.getElementById('s-date').value = today;
@@ -1144,6 +1189,22 @@
             showToast("Company profile saved.", "success");
         }
 
+        async function loadVatNumber() {
+            const { data } = await _supa.from('vat_user_settings').select('vat_number').eq('user_id', currentUserId).maybeSingle();
+            const vatNo = data?.vat_number || '';
+            const input = document.getElementById('settings-vat-number');
+            if (input) input.value = vatNo;
+            const badge = document.getElementById('vat-return-vat-no');
+            if (badge) badge.innerText = vatNo ? `VAT No: ${vatNo}` : '';
+        }
+
+        async function saveVatNumber() {
+            const vatNo = document.getElementById('settings-vat-number').value.trim();
+            await _supa.from('vat_user_settings').upsert({ user_id: currentUserId, vat_number: vatNo });
+            await loadVatNumber();
+            showToast("VAT registration number saved.", "success");
+        }
+
         // ================= STARTING SERIAL NUMBERS =================
         async function loadStartingSerials() {
             const { data } = await _supa.from('vat_user_settings').select('start_serial_sales, start_serial_purchases').eq('user_id', currentUserId).maybeSingle();
@@ -1211,8 +1272,8 @@
 
             dropdown.innerHTML = matches.map((m, idx) => `
                 <div class="merchant-suggestion-item px-3 py-2 text-xs cursor-pointer hover:bg-blue-500/10 flex justify-between items-center" data-index="${idx}" onmousedown="selectMerchantSuggestion('${type}', ${idx})">
-                    <span class="font-semibold text-slate-700 dark:text-slate-200">${m.name}</span>
-                    ${m.category ? `<span class="text-[10px] text-slate-400">${m.category}</span>` : ''}
+                    <span class="font-semibold text-slate-700 dark:text-slate-200">${h(m.name)}</span>
+                    ${m.category ? `<span class="text-[10px] text-slate-400">${h(m.category)}</span>` : ''}
                 </div>`).join('');
             dropdown.classList.remove('hidden');
             highlightMerchantSuggestion(type, -1);
@@ -1378,7 +1439,7 @@
 
                 lockedMonths.push(val);
                 await _supa.from('vat_locked_periods').insert({ user_id: currentUserId, period: val });
-                loadLockedMonths();
+                await loadLockedMonths();
                 updateApplicationMetrics();
                 evaluateLockStatusForForms();
 
@@ -1398,7 +1459,7 @@
 
                 lockedMonths = lockedMonths.filter(x => x !== m);
                 await _supa.from('vat_locked_periods').delete().eq('user_id', currentUserId).eq('period', m);
-                loadLockedMonths();
+                await loadLockedMonths();
                 updateApplicationMetrics();
                 evaluateLockStatusForForms();
                 showToast(`Period ${m} unlocked.`, "success");
@@ -1470,6 +1531,13 @@
             // Auto-focus supplier input on purchase/sale tabs
             if (tabId === 'add-purchase') setTimeout(() => document.getElementById('p-supplier')?.focus(), 100);
             if (tabId === 'add-sale') setTimeout(() => document.getElementById('s-supplier')?.focus(), 100);
+
+            // Close mobile sidebar on navigation
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar.classList.contains('open')) { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
+            }
 
             lucide.createIcons();
         }
@@ -1697,10 +1765,10 @@
 
         function renderDuplicateDetailBlock(d) {
             return `
-                <div><span class="opacity-50">Date:</span> <strong>${d.date}</strong></div>
-                <div><span class="opacity-50">Name:</span> <strong>${d.supplier}</strong></div>
-                <div><span class="opacity-50">Category:</span> ${d.category || '—'}</div>
-                <div><span class="opacity-50">Receipt/Invoice:</span> ${d.receiptNo || '—'}</div>
+                <div><span class="opacity-50">Date:</span> <strong>${h(d.date)}</strong></div>
+                <div><span class="opacity-50">Name:</span> <strong>${h(d.supplier)}</strong></div>
+                <div><span class="opacity-50">Category:</span> ${h(d.category || '—')}</div>
+                <div><span class="opacity-50">Receipt/Invoice:</span> ${h(d.receiptNo || '—')}</div>
                 <div><span class="opacity-50">Net:</span> £${(d.net || 0).toFixed(2)}</div>
                 <div><span class="opacity-50">VAT:</span> £${(d.vatAmount || 0).toFixed(2)}</div>
                 <div><span class="opacity-50">Gross:</span> £${(d.gross || 0).toFixed(2)}</div>`;
@@ -2182,6 +2250,49 @@
             return result;
         }
 
+        function clearAuditDateFilter() {
+            document.getElementById('log-date-from').value = '';
+            document.getElementById('log-date-to').value = '';
+            updateApplicationMetrics();
+        }
+
+        function renderVatReturnSummary(ledger) {
+            const boxEl = document.getElementById('vat-return-boxes');
+            if (!boxEl) return;
+
+            let box1 = 0, box4 = 0, box6 = 0, box7 = 0;
+            ledger.forEach(r => {
+                if (r.type === 'sale') { box1 += r.vatAmount; box6 += r.net; }
+                else { box4 += r.vatAmount; box7 += r.net; }
+            });
+            const box3 = box1;
+            const box5 = box1 - box4;
+
+            const boxes = [
+                { label: 'Box 1', title: 'Output VAT Due', value: `£${box1.toFixed(2)}`, color: 'rose' },
+                { label: 'Box 3', title: 'Total VAT Due', value: `£${box3.toFixed(2)}`, color: 'rose' },
+                { label: 'Box 4', title: 'Reclaimable VAT', value: `£${box4.toFixed(2)}`, color: 'blue' },
+                { label: 'Box 5', title: box5 >= 0 ? 'Net VAT to Pay' : 'Net VAT Refund', value: `£${Math.abs(box5).toFixed(2)}`, color: box5 >= 0 ? 'amber' : 'emerald' },
+                { label: 'Box 6', title: 'Total Sales (Net)', value: `£${box6.toFixed(2)}`, color: 'slate' },
+                { label: 'Box 7', title: 'Total Purchases (Net)', value: `£${box7.toFixed(2)}`, color: 'slate' },
+            ];
+
+            const colorMap = {
+                rose: 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300',
+                blue: 'bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300',
+                amber: 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300',
+                emerald: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+                slate: 'bg-slate-900/[0.03] dark:bg-white/5 border-slate-900/5 dark:border-white/5 text-slate-700 dark:text-slate-300',
+            };
+
+            boxEl.innerHTML = boxes.map(b => `
+                <div class="border rounded-xl p-3 text-center ${colorMap[b.color]}">
+                    <div class="text-[9px] font-bold uppercase tracking-widest opacity-60 mb-0.5">${b.label}</div>
+                    <div class="text-[10px] font-semibold opacity-75 mb-1">${b.title}</div>
+                    <div class="text-sm font-black">${b.value}</div>
+                </div>`).join('');
+        }
+
         function populateCategoryFilter(ledger) {
             const select = document.getElementById('log-category-filter');
             const current = select.value;
@@ -2218,11 +2329,11 @@
                         : '<span class="text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-lg border border-rose-500/20 font-bold text-[10px]">SALE</span>';
                     return `<tr class="hover:bg-slate-900/[0.02] dark:hover:bg-white/5 transition-colors">
                         <td class="p-3 pl-5">${typeBadge}</td>
-                        <td class="p-3 font-mono text-slate-500">${r.computedSerial}${r.isLocked ? ' <span title="Locked">🔒</span>' : ''}</td>
-                        <td class="p-3 font-bold text-slate-800 dark:text-slate-200">${r.receiptNo || '—'}</td>
-                        <td class="p-3 opacity-80">${r.date}</td>
-                        <td class="p-3 font-semibold">${r.supplier}</td>
-                        <td class="p-3 text-slate-500">${r.category || '—'}</td>
+                        <td class="p-3 font-mono text-slate-500">${h(r.computedSerial)}${r.isLocked ? ' <span title="Locked">🔒</span>' : ''}</td>
+                        <td class="p-3 font-bold text-slate-800 dark:text-slate-200">${h(r.receiptNo || '—')}</td>
+                        <td class="p-3 opacity-80">${h(r.date)}</td>
+                        <td class="p-3 font-semibold">${h(r.supplier)}</td>
+                        <td class="p-3 text-slate-500">${h(r.category || '—')}</td>
                         <td class="p-3">£${r.net.toFixed(2)}</td>
                         <td class="p-3">£${r.vatAmount.toFixed(2)}</td>
                         <td class="p-3 font-bold">£${r.gross.toFixed(2)}</td>
@@ -2243,8 +2354,8 @@
                     return `<div class="p-3 border rounded-xl text-xs backdrop-blur-sm transition-all ${borderClass}">
                         <div class="flex justify-between items-center">
                             <div>
-                                <span class="font-bold text-slate-800 dark:text-slate-200">${r.receiptNo ? r.receiptNo + ' — ' : ''}${r.supplier}</span>
-                                <div class="text-[10px] opacity-50 mt-0.5">${r.date}${r.category ? ' · ' + r.category : ''}</div>
+                                <span class="font-bold text-slate-800 dark:text-slate-200">${r.receiptNo ? h(r.receiptNo) + ' — ' : ''}${h(r.supplier)}</span>
+                                <div class="text-[10px] opacity-50 mt-0.5">${h(r.date)}${r.category ? ' · ' + h(r.category) : ''}</div>
                             </div>
                             <span class="font-extrabold text-slate-800 dark:text-slate-100">£${r.gross.toFixed(2)}</span>
                         </div>
@@ -2258,8 +2369,8 @@
                     return `<div class="p-3 border rounded-xl text-xs backdrop-blur-sm transition-all ${borderClass}">
                         <div class="flex justify-between items-center">
                             <div>
-                                <span class="font-bold text-slate-800 dark:text-slate-200">${r.receiptNo ? r.receiptNo + ' — ' : ''}${r.supplier}</span>
-                                <div class="text-[10px] opacity-50 mt-0.5">${r.date}${r.category ? ' · ' + r.category : ''}</div>
+                                <span class="font-bold text-slate-800 dark:text-slate-200">${r.receiptNo ? h(r.receiptNo) + ' — ' : ''}${h(r.supplier)}</span>
+                                <div class="text-[10px] opacity-50 mt-0.5">${h(r.date)}${r.category ? ' · ' + h(r.category) : ''}</div>
                             </div>
                             <span class="font-extrabold text-slate-800 dark:text-slate-100">£${r.gross.toFixed(2)}</span>
                         </div>
@@ -2270,6 +2381,8 @@
             const filterType = document.getElementById('log-type-filter').value;
             const filterCategory = document.getElementById('log-category-filter').value;
             const searchVal = document.getElementById('log-search').value.trim().toLowerCase();
+            const dateFrom = document.getElementById('log-date-from').value;
+            const dateTo = document.getElementById('log-date-to').value;
             const auditTable = document.getElementById('master-log-table-body');
 
             let visibleNet = 0, visibleVat = 0, visibleGross = 0;
@@ -2278,6 +2391,8 @@
             compiledLedger.slice().reverse().forEach(r => {
                 if (filterType !== 'ALL' && r.type !== filterType) return;
                 if (filterCategory !== 'ALL' && r.category !== filterCategory) return;
+                if (dateFrom && r.date < dateFrom) return;
+                if (dateTo && r.date > dateTo) return;
                 if (searchVal) {
                     const haystack = `${r.supplier} ${r.receiptNo} ${r.category} ${r.net} ${r.gross}`.toLowerCase();
                     if (!haystack.includes(searchVal)) return;
@@ -2300,11 +2415,11 @@
 
                 auditRows.push(`<tr class="hover:bg-slate-900/[0.02] dark:hover:bg-white/5 border-b border-slate-900/5 dark:border-white/5 transition-colors">
                     <td class="p-4 pl-5">${typeBadge}</td>
-                    <td class="p-4 font-mono font-bold text-slate-500">${r.computedSerial}${r.isLocked ? ' <span title="Locked">🔒</span>' : ''}</td>
-                    <td class="p-4 font-black">${r.receiptNo || '—'}</td>
-                    <td class="p-4 opacity-80">${r.date}</td>
-                    <td class="p-4 font-bold text-slate-800 dark:text-slate-200">${r.supplier}</td>
-                    <td class="p-4 text-slate-500">${r.category || '—'}</td>
+                    <td class="p-4 font-mono font-bold text-slate-500">${h(r.computedSerial)}${r.isLocked ? ' <span title="Locked">🔒</span>' : ''}</td>
+                    <td class="p-4 font-black">${h(r.receiptNo || '—')}</td>
+                    <td class="p-4 opacity-80">${h(r.date)}</td>
+                    <td class="p-4 font-bold text-slate-800 dark:text-slate-200">${h(r.supplier)}</td>
+                    <td class="p-4 text-slate-500">${h(r.category || '—')}</td>
                     <td class="p-4">£${r.net.toFixed(2)}</td>
                     <td class="p-4">£${r.vatAmount.toFixed(2)}</td>
                     <td class="p-4 font-bold">£${r.gross.toFixed(2)}</td>
@@ -2324,21 +2439,26 @@
             lucide.createIcons();
             if (currentTab === 'dashboard') {
                 updateCharts(filteredLedger);
+                renderVatReturnSummary(filteredLedger);
             }
         }
 
+        const debouncedUpdateMetrics = debounce(updateApplicationMetrics, 280);
+
         // ================= CHARTS =================
         function updateCharts(ledgerData = []) {
-            if(!ledgerData.length) {
+            if (!ledgerData.length) {
                 if (timelineChartInstance) { timelineChartInstance.destroy(); timelineChartInstance = null; }
                 if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
                 if (categoryChartInstance) { categoryChartInstance.destroy(); categoryChartInstance = null; }
+                _chartTheme = null;
                 return;
             }
 
             const isDark = document.documentElement.classList.contains('dark');
             const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
             const textMuted = isDark ? '#94a3b8' : '#64748b';
+            const themeChanged = _chartTheme !== isDark;
 
             const monthlyBuckets = {};
             let totalPurchaseVat = 0;
@@ -2347,25 +2467,45 @@
 
             ledgerData.forEach(item => {
                 const monthStr = item.date.substring(0, 7);
-                if(!monthlyBuckets[monthStr]) monthlyBuckets[monthStr] = { purchases: 0, sales: 0 };
-                if(item.type === 'purchase') {
+                if (!monthlyBuckets[monthStr]) monthlyBuckets[monthStr] = { purchases: 0, sales: 0 };
+                if (item.type === 'purchase') {
                     monthlyBuckets[monthStr].purchases += item.net;
                     totalPurchaseVat += item.vatAmount;
                 } else {
                     monthlyBuckets[monthStr].sales += item.net;
                     totalSalesVat += item.vatAmount;
                 }
-
                 const cat = item.category || 'Uncategorized';
-                if(!categoryBuckets[cat]) categoryBuckets[cat] = { purchases: 0, sales: 0 };
+                if (!categoryBuckets[cat]) categoryBuckets[cat] = { purchases: 0, sales: 0 };
                 categoryBuckets[cat][item.type === 'purchase' ? 'purchases' : 'sales'] += item.net;
             });
 
             const sortedMonths = Object.keys(monthlyBuckets).sort();
             const salesData = sortedMonths.map(m => monthlyBuckets[m].sales);
             const purchaseData = sortedMonths.map(m => monthlyBuckets[m].purchases);
+            const catLabels = Object.keys(categoryBuckets).sort();
 
-            if (timelineChartInstance) timelineChartInstance.destroy();
+            if (!themeChanged && timelineChartInstance && pieChartInstance && categoryChartInstance) {
+                timelineChartInstance.data.labels = sortedMonths;
+                timelineChartInstance.data.datasets[0].data = salesData;
+                timelineChartInstance.data.datasets[1].data = purchaseData;
+                timelineChartInstance.update('none');
+
+                pieChartInstance.data.datasets[0].data = [totalPurchaseVat, totalSalesVat];
+                pieChartInstance.update('none');
+
+                categoryChartInstance.data.labels = catLabels;
+                categoryChartInstance.data.datasets[0].data = catLabels.map(c => categoryBuckets[c].purchases);
+                categoryChartInstance.data.datasets[1].data = catLabels.map(c => categoryBuckets[c].sales);
+                categoryChartInstance.update('none');
+                return;
+            }
+
+            _chartTheme = isDark;
+            if (timelineChartInstance) { timelineChartInstance.destroy(); timelineChartInstance = null; }
+            if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
+            if (categoryChartInstance) { categoryChartInstance.destroy(); categoryChartInstance = null; }
+
             const ctxTimeline = document.getElementById('financialAnalyticsChart').getContext('2d');
             timelineChartInstance = new Chart(ctxTimeline, {
                 type: 'line',
@@ -2386,7 +2526,6 @@
                 }
             });
 
-            if (pieChartInstance) pieChartInstance.destroy();
             const ctxPie = document.getElementById('vatDistributionChart').getContext('2d');
             pieChartInstance = new Chart(ctxPie, {
                 type: 'doughnut',
@@ -2401,8 +2540,6 @@
                 }
             });
 
-            const catLabels = Object.keys(categoryBuckets).sort();
-            if (categoryChartInstance) categoryChartInstance.destroy();
             const ctxCat = document.getElementById('categoryChart').getContext('2d');
             categoryChartInstance = new Chart(ctxCat, {
                 type: 'bar',
@@ -2794,11 +2931,11 @@
 
                 statusEl.innerText = `Imported ${imported} · Skipped ${skippedDuplicate} duplicate(s) · Skipped ${skippedLocked} locked-period row(s).`;
                 fileInput.value = '';
+                btn.disabled = false;
                 updateApplicationMetrics();
                 switchTab('dashboard');
                 showToast(`Imported ${imported} rows from Excel.`, "success");
             });
-            btn.disabled = false;
         }
 
         async function triggerJsonDatabaseExport() {
@@ -2882,6 +3019,26 @@
             } else if (_authMode === 'signup' && !result.data.session) {
                 errEl.className = 'p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-600 font-semibold';
                 errEl.innerText = 'Account created! Check your email to confirm, then sign in.';
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        async function handleForgotPassword() {
+            const email = document.getElementById('auth-email').value.trim();
+            const errEl = document.getElementById('auth-error');
+            errEl.className = 'hidden p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-600 font-semibold';
+            if (!email) {
+                errEl.innerText = 'Enter your email address first.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            const { error } = await _supa.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+            if (error) {
+                errEl.innerText = error.message;
+                errEl.classList.remove('hidden');
+            } else {
+                errEl.className = 'p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-600 font-semibold';
+                errEl.innerText = 'Password reset email sent! Check your inbox.';
                 errEl.classList.remove('hidden');
             }
         }
