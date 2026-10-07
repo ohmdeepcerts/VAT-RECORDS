@@ -1239,7 +1239,8 @@
 
             if (val.length < 2) { hideMerchantSuggestions(type); return; }
 
-            const history = await db.transactions.where('type').equals(type).toArray();
+            // Search all transactions (not just same type) so suppliers appear across purchase/sale forms
+            const history = await db.transactions.toArray();
             const freqMap = {};
             history.forEach(item => {
                 if (!item.supplier) return;
