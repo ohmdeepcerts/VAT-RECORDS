@@ -1249,8 +1249,8 @@
             });
 
             const seen = new Map();
-            history.sort((a, b) => new Date(b.date) - new Date(a.date));
-            history.forEach(item => {
+            const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+            sortedHistory.forEach(item => {
                 if (!item.supplier) return;
                 const key = item.supplier.trim().toLowerCase();
                 if (!seen.has(key)) seen.set(key, { name: item.supplier.trim(), category: item.category || '', freq: freqMap[key] || 0 });
@@ -1369,7 +1369,7 @@
         }
         function renderCategoryDatalist() {
             const dl = document.getElementById('category-datalist');
-            dl.innerHTML = categories.map(c => `<option value="${c}"></option>`).join('');
+            dl.innerHTML = categories.map(c => `<option value="${h(c)}"></option>`).join('');
         }
         function renderCategoryManagerList() {
             const container = document.getElementById('category-manager-list');
@@ -1778,7 +1778,7 @@
         function renderDuplicateAttachmentBlock(d) {
             if (!d.fileData) return `<div class="h-40 flex items-center justify-center text-[10px] text-slate-400">No attachment</div>`;
             if (d.fileData.startsWith('data:image')) return `<img src="${d.fileData}" class="w-full h-40 object-contain bg-slate-900/5 dark:bg-white/5">`;
-            return `<div class="h-40 flex items-center justify-center text-[10px] text-slate-400 px-2 text-center">${d.fileName || 'Attached file'} (open after saving to view)</div>`;
+            return `<div class="h-40 flex items-center justify-center text-[10px] text-slate-400 px-2 text-center">${h(d.fileName || 'Attached file')} (open after saving to view)</div>`;
         }
 
         function showDuplicateModal(type, entry, duplicate) {
@@ -1884,7 +1884,7 @@
                             <button type="button" onclick="viewerReset('${type}')" class="glass-btn px-2 py-1 rounded-lg bg-slate-900/5 dark:bg-white/10 text-[10px] font-bold" title="Reset view">Reset</button>
                             <button type="button" onclick="viewerToggleCrop('${type}')" id="${type}-crop-btn" class="glass-btn px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-bold" title="Crop image">Crop</button>
                         </div>
-                        <span class="text-[9px] text-slate-400 truncate max-w-[110px]" title="${name}">${name}</span>
+                        <span class="text-[9px] text-slate-400 truncate max-w-[110px]" title="${h(name)}">${h(name)}</span>
                     </div>
                     <div id="${type}-crop-actions" class="hidden justify-end space-x-2 mt-2">
                         <button type="button" onclick="viewerCancelCrop('${type}')" class="glass-btn px-3 py-1.5 rounded-lg bg-slate-900/5 dark:bg-white/10 text-[10px] font-bold">Cancel</button>
@@ -1900,7 +1900,7 @@
             } else {
                 panel.innerHTML = `
                     <div class="h-64 flex items-center justify-center text-center text-xs text-slate-400 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-xl">
-                        <span>${name}</span>
+                        <span>${h(name)}</span>
                     </div>`;
             }
             lucide.createIcons();
@@ -2133,9 +2133,9 @@
             title.innerText = fileName || 'Attachment';
 
             if (dataUrl.startsWith('data:image')) {
-                content.innerHTML = `<img src="${dataUrl}" class="max-w-full max-h-full object-contain rounded-xl shadow-lg" alt="${fileName}">`;
+                content.innerHTML = `<img src="${dataUrl}" class="max-w-full max-h-full object-contain rounded-xl shadow-lg" alt="${h(fileName)}">`;
             } else {
-                content.innerHTML = `<iframe src="${dataUrl}" class="w-full h-full rounded-xl border-0" title="${fileName}"></iframe>`;
+                content.innerHTML = `<iframe src="${dataUrl}" class="w-full h-full rounded-xl border-0" title="${h(fileName)}"></iframe>`;
             }
             modal.classList.remove('hidden');
         }
@@ -2298,7 +2298,7 @@
             const select = document.getElementById('log-category-filter');
             const current = select.value;
             const cats = [...new Set(ledger.map(i => i.category).filter(Boolean))].sort();
-            select.innerHTML = '<option value="ALL">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            select.innerHTML = '<option value="ALL">All Categories</option>' + cats.map(c => `<option value="${h(c)}">${h(c)}</option>`).join('');
             if (cats.includes(current)) select.value = current;
             else select.value = 'ALL';
         }
@@ -3085,9 +3085,11 @@
                     if (!Array.isArray(parsed)) throw new Error("Invalid schema arrays.");
 
                     showConfirm("Restore Database", "Merge imported entries with current data?", async () => {
-                        let imported = 0, skippedLocked = 0;
+                        let imported = 0, skippedLocked = 0, skippedDuplicate = 0;
                         for (const item of parsed) {
                             if (isDateLocked(item.date)) { skippedLocked++; continue; }
+                            const dup = await findDuplicateEntry(item.type, item);
+                            if (dup) { skippedDuplicate++; continue; }
                             delete item.id;
                             delete item.calculatedSerial;
                             delete item.isLocked;
@@ -3095,15 +3097,16 @@
                             if (item.category) await addCategoryIfNew(item.category);
                             imported++;
                         }
-                        statusEl.innerText = `Restored ${imported} entries. Skipped ${skippedLocked} locked-period rows.`;
+                        statusEl.innerText = `Restored ${imported} entries. Skipped ${skippedDuplicate} duplicate(s) · Skipped ${skippedLocked} locked-period rows.`;
+                        btn.disabled = false;
                         showToast("Database restoration completed.", "success");
                         updateApplicationMetrics();
                         switchTab('dashboard');
                     });
                 } catch (err) {
                     showToast("Failed to parse JSON structure.", "error");
+                    btn.disabled = false;
                 }
-                btn.disabled = false;
             };
             reader.readAsText(fileInput.files[0]);
         }
